@@ -1,0 +1,17 @@
+version: '3.7'
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ws-server
+    container_name: ws
+    command: 'yarn start'
+    volumes:
+      - ./src/:/code
+    ports:
+      - "5000:5000"
+    # env_file: ./src/.env
+    environment:
+      - NODE_ENV=development

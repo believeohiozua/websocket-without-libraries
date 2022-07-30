@@ -1,0 +1,7 @@
+development_credentials.csv
+production_credentials.csv
+.DS_Store
+**.DS_Store
+.vscode/
+node_modules/
+.env
