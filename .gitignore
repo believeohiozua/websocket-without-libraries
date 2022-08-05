@@ -5,3 +5,4 @@ production_credentials.csv
 .vscode/
 node_modules/
 .env
+venv
