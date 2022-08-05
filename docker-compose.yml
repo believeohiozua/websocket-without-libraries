@@ -3,7 +3,7 @@ version: '3.7'
 services:
   server:
     build:
-      context: .
+      context: ./src/node
       dockerfile: Dockerfile
     image: ws-server
     container_name: ws
