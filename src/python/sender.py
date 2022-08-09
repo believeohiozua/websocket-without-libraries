@@ -7,6 +7,12 @@ import json
 import re
 import ast
 
+
+import websockets
+import asyncio
+import json
+import time
+
 def fetch_batch(folder,batch_num):
     s3 = boto3.client(
         "s3", 
@@ -15,35 +21,36 @@ def fetch_batch(folder,batch_num):
         region_name='eu-west-1'
 
         )
-    with open(f'{batch_num}.txt', 'wb') as data:
+    with open('batch.txt', 'wb') as data:
         s3.download_fileobj("holotch-service-content", f'archive/{folder}/{batch_num}.bt', data)
-    with open(f'{batch_num}.txt', 'r') as file:
+    with open('batch.txt', 'r') as file:
    
         turn= file.read()
         return turn.split('//')
 
-# print(fetch_batch('hiroki1',1))
 
-ws = create_connection("ws://0.0.0.0:8000")
-count= 1
-for msg in fetch_batch('hiroki1',1):
-    count+=1
-    data = {
-        "command": "new_frame", 
-        "sender": "py script", 
-        "frame": msg, 
-        "frameId": f"{count}", 
-        "keyFrameID": f"{count}", 
-      }
-    time.sleep(1)
-    # d = json.loads(f"{data}")#.replace('\"', '')))#
-    
-    # p = re.compile('(?<!\\\\)\'')
-    # e = p.sub('\"', json.dumps(data))
-    parsed_json = ast.literal_eval(json.dumps(data))
-    print(parsed_json)
-    # send json data to server
-    ws.send(json.dumps(parsed_json))
-    # ws.send(parsed_json)
-# result = ws.recv()
-# print('Result: {}'.format(result))
+#Start websocket transmission
+
+async def listen():
+    url = "ws://0.0.0.0:8000"
+    async with websockets.connect(url) as ws:
+        count = 1
+        for msg in fetch_batch('hiroki1',1):
+            count+=1
+            data = {
+                "command": "new_frame", 
+                "sender": "py script", 
+                "frame": msg, 
+                "frameId": count, 
+                "keyFrameID": count, 
+            }
+            time.sleep(0.5)
+            await ws.send(json.dumps(data))
+
+        while True:
+            msg = await ws.recv()
+            print(msg)
+
+
+asyncio.get_event_loop().run_until_complete(listen())
+# asyncio.get_event_loop().run_forever()
