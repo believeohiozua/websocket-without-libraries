@@ -1,0 +1,13 @@
+boto3==1.24.46
+botocore==1.27.46
+jmespath==1.0.1
+python-dateutil==2.8.2
+python-decouple==3.6
+rel==0.4.7
+s3transfer==0.6.0
+simple-websocket-server==0.4.2
+SimpleWebSocketServer==0.1.1
+six==1.16.0
+urllib3==1.26.11
+websocket-client==1.3.3
+websockets==10.3
