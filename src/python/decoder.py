@@ -4,11 +4,17 @@ import time
 from sender import send_message
 
 def fetch_batch(folder, batch_num):
-    print('\nbatch_num ', batch_num, '\n')
+    '''Fetch batch from S3'''
     s3 = boto3.client( "s3", region_name='eu-west-1' )
     with open('batch.bt', 'wb') as data:
-        s3.download_fileobj("holotch-service-content", f'archive/{folder}/{batch_num}.bt', data) #hiroki1/1.bt
+        s3.download_fileobj(
+            "holotch-service-content", 
+            f'archive/{folder}/{batch_num}.bt',
+            data
+            )
         data.close()
+
+    '''Read downloaded binary file'''
     with open('batch.bt', 'rb') as file:   
         raw_data= file.read()
         '''Convert base64 data to binary data (buffer)'''
@@ -16,9 +22,13 @@ def fetch_batch(folder, batch_num):
         file.close()
         return to_binary
 
+
+
+
 def decoder(to_binary, batch_no): 
-    # get total to_binary size 
-    total_size = len(to_binary)       
+    
+    total_size = len(to_binary) # --buffer size  
+    '''Header information'''
     size = int.from_bytes(to_binary[:1], byteorder='big' , signed=True)
     size2 = int.from_bytes(to_binary[1:2], byteorder='big' , signed=True)
     byte3 = int.from_bytes(to_binary[2:3], byteorder='big' , signed=True)
@@ -27,21 +37,23 @@ def decoder(to_binary, batch_no):
     timestamp = int.from_bytes(to_binary[8:12], byteorder='little' , signed=True)
     num_meshes = int.from_bytes(to_binary[12:16], byteorder='little', signed=True)
     valid_frame=[size,size2, byte3, byte4]
-    if  valid_frame == [3,20,1,0]:
-        ''' if false skip to the next batch'''        
+
+   
+    if  valid_frame == [3,20,1,0]: #check if header is correct      
         frame_size=0
         frame_count = 0
         initial_mesh_frame_size=mesh_frame_size
-        while total_size >= frame_size:   
-            # try:                 
+        mesh_size_helper=0
+        while total_size >= frame_size:                
             slice_frame = int.from_bytes(to_binary[frame_size:mesh_frame_size], byteorder='little', signed=True)
-            frame = to_binary[:slice_frame] 
-            #convert binary to base64 encoded string
+            frame = to_binary[frame_size:mesh_frame_size+slice_frame]
+            
+            '''convert binary to base64 encoded string'''
             frame_base64 = base64.b64encode(frame)
             frame_base64 = frame_base64.decode('utf-8')            
-            frame_size=mesh_frame_size           
+            frame_size=mesh_frame_size+4        
+            mesh_frame_size=mesh_frame_size+8
             frame_count += 1
-            mesh_frame_size=initial_mesh_frame_size+frame_size
             
             context =  {
                     "command": "new_frame", 
@@ -58,7 +70,6 @@ def decoder(to_binary, batch_no):
                 "mesh_frame_size":mesh_frame_size
                 }
 
-            # time.sleep(0.5) 
             print(
                 f'''
                 \nbatch_no: {batch_no}
@@ -76,8 +87,6 @@ def decoder(to_binary, batch_no):
         decoder(fetch_batch('hiroki1', batch_no), batch_no)
 
     else:
-        print('Header is incorrect')
-        return None
-
-
-decoder(fetch_batch('hiroki1',1),1)
+        '''Start recursion to next batch'''
+        batch_no += 1
+        decoder(fetch_batch('hiroki1', batch_no), batch_no)
