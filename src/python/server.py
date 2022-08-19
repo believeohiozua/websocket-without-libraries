@@ -1,24 +1,25 @@
 from simple_websocket_server import WebSocketServer, WebSocket
+import json
 
-
-class LiveStream(WebSocket):
+class SocketServer(WebSocket):
     def handle(self):
         for client in clients:
             if client != self:
-                client.send_message(self.data)
+                client.send_message(json.dumps(self.data))
 
     def connected(self):
         print(self.address, 'connected')
         for client in clients:
-            client.send_message(self.data)
+            if self.data:
+                client.send_message(self.data)
         clients.append(self)
 
     def handle_close(self):
         clients.remove(self)
-        print(self.address, 'closed')
-        for client in clients:
-            client.send_message(self.address[0] + u' - disconnected')
+        print(self.address, 'left')
 
 clients = []
-server = WebSocketServer('', 8000, LiveStream)
+port = 8000
+server = WebSocketServer('0.0.0.0', port, SocketServer)
+print(f'server started at port {port}')
 server.serve_forever()
