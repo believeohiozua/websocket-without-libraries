@@ -6,9 +6,25 @@ services:
       context: .
       dockerfile: Dockerfile
     image: wsocket_img
-    command: 'python server.py'
+    command: python server.py
+    # entrypoint: [ "bash", "-c", "python server.py  && python receiver.py" ]
     volumes:
-      - ./:/src
+      - ./server.py:/src/server.py
+      - ./.env:/src/.env
+      - ./decoder.py:/src/decoder.py
+      - ./requirements.txt:/src/requirements.txt
     ports:
       - "80:8000"
+
+  receiver:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: recv_img
+    command: python receiver.py
+    # entrypoint: [ "bash", "-c", "python receiver.py && cd production_receiver_1 && ls" ]
+    depends_on:
+      - server
+    volumes:
+      - ./receiver.py:/src/receiver.py
    

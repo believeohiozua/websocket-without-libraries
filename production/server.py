@@ -1,11 +1,14 @@
 from simple_websocket_server import WebSocketServer, WebSocket
 import json
 
+
+
 class SocketServer(WebSocket):
     def handle(self):
-        for client in clients:
+        for client in clients:            
             if client != self:
                 client.send_message(json.dumps(self.data))
+                
 
     def connected(self):
         print(self.address, 'connected')
@@ -16,7 +19,7 @@ class SocketServer(WebSocket):
 
     def handle_close(self):
         clients.remove(self)
-        print(self.address, 'left')
+        print(self.address, 'disconnected')
 
 clients = []
 port = 8000

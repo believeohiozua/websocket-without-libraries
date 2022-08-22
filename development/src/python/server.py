@@ -20,6 +20,6 @@ class SocketServer(WebSocket):
 
 clients = []
 port = 8000
-server = WebSocketServer('0.0.0.0', port, SocketServer)
+server = WebSocketServer('', port, SocketServer)
 print(f'server started at port {port}')
 server.serve_forever()

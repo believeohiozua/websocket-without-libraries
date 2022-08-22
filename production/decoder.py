@@ -1,11 +1,30 @@
 import boto3
 import base64
 import time
-from sender import send_message
+import json
+import ssl
+import websocket
+from decouple import config
+
+
+url=config("CONNECT_STRING", default="ws://176.34.6.114:80",  cast=str)
+def send_message(message):
+    ws = websocket.WebSocket(sslopt={"cert_reqs": ssl.CERT_NONE})
+    ws.connect(config("CONNECT_STRING", 
+    default="ws://176.34.6.114:80", 
+    cast=str))    
+    ws.send(json.dumps(message))
+    print('data sent!', end='')
+
 
 def fetch_batch(folder, batch_num):
     '''Fetch batch from S3'''
-    s3 = boto3.client( "s3", region_name='eu-west-1' )
+    s3 = boto3.client(
+        "s3", 
+        aws_access_key_id=config("AWS_ACCESS_KEY_ID", default="", cast=str),
+        aws_secret_access_key=config("AWS_SECRET_ACCESS_KEY", default="", cast=str),
+        region_name=config("AWS_REGION_NAME", default="", cast=str)
+    )
     with open('batch.bt', 'wb') as data:
         s3.download_fileobj(
             "holotch-service-content", 
@@ -23,10 +42,7 @@ def fetch_batch(folder, batch_num):
         return to_binary
 
 
-
-
-def decoder(to_binary, batch_no): 
-    
+def decoder(to_binary, batch_no):     
     total_size = len(to_binary) # --buffer size  
     '''Header information'''
     size = int.from_bytes(to_binary[:1], byteorder='big' , signed=True)
@@ -68,19 +84,18 @@ def decoder(to_binary, batch_no):
                 "num_meshes":num_meshes,
                 "frame":frame_base64,
                 "mesh_frame_size":mesh_frame_size
-                }
-
-            print(
-                f'''
-                \nbatch_no: {batch_no}
-                \nmesh_frame_size{mesh_frame_size}
-                \ntotal_size {total_size}
-                \nframe_count {frame_count}
-                \nframe_size: {frame_size}
-                \n\n''')
+                }           
 
             time.sleep(0.5)
             send_message(context)
+            print(
+                f'''
+                \nbatch_no: {batch_no}
+                \nmesh_frame_size: {mesh_frame_size}
+                \ntotal_size: {total_size}
+                \nframe_count: {frame_count}
+                \nframe_size: {frame_size}
+                \n\n''')
 
         '''Start recursion to next batch'''
         batch_no += 1

@@ -123,4 +123,12 @@ if __name__ == "__main__":
                               )
     ws.on_open = on_open
     ws.run_forever()
+
+
+
+
+    print(self.data)
+    if self.data.get('command') == 'archive_id':
+        decoder(fetch_batch(self.data.get('archive_id'),1),1)
+        print(f'streaming archive: {self.data.get("archive_id")}')
     '''

@@ -13,6 +13,8 @@ def send_message(message):
 def id_receiver():
     return 'hiroki1'
 
+response = ws.recv()
+print(response)
 
 '''end streaming manually with CTRL+C'''
 # rel.signal(2, rel.abort) 
