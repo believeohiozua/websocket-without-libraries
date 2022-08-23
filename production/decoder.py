@@ -18,6 +18,7 @@ def send_message(message):
 
 
 def fetch_batch(folder, batch_num):
+    print(f"{folder}==={batch_num}")
     '''Fetch batch from S3'''
     s3 = boto3.client(
         "s3", 
@@ -41,67 +42,124 @@ def fetch_batch(folder, batch_num):
         file.close()
         return to_binary
 
-
-def decoder(to_binary, batch_no):     
-    total_size = len(to_binary) # --buffer size  
-    '''Header information'''
-    size = int.from_bytes(to_binary[:1], byteorder='big' , signed=True)
-    size2 = int.from_bytes(to_binary[1:2], byteorder='big' , signed=True)
-    byte3 = int.from_bytes(to_binary[2:3], byteorder='big' , signed=True)
-    byte4 = int.from_bytes(to_binary[3:4], byteorder='big' , signed=True)        
-    mesh_frame_size= int.from_bytes(to_binary[4:8], byteorder='little' , signed=True)
-    timestamp = int.from_bytes(to_binary[8:12], byteorder='little' , signed=True)
-    num_meshes = int.from_bytes(to_binary[12:16], byteorder='little', signed=True)
-    valid_frame=[size,size2, byte3, byte4]
+# '''
+# def decoder(to_binary, batch_no):     
+#     total_size = len(to_binary) # --buffer size  
+#     '''Header information'''
+#     size = int.from_bytes(to_binary[:1], byteorder='big' , signed=True)
+#     size2 = int.from_bytes(to_binary[1:2], byteorder='big' , signed=True)
+#     byte3 = int.from_bytes(to_binary[2:3], byteorder='big' , signed=True)
+#     byte4 = int.from_bytes(to_binary[3:4], byteorder='big' , signed=True)        
+#     mesh_frame_size= int.from_bytes(to_binary[4:8], byteorder='little' , signed=True)
+#     timestamp = int.from_bytes(to_binary[8:12], byteorder='little' , signed=True)
+#     num_meshes = int.from_bytes(to_binary[12:16], byteorder='little', signed=True)
+#     valid_frame=[size,size2, byte3, byte4]
 
    
-    if  valid_frame == [3,20,1,0]: #check if header is correct      
-        frame_size=0
-        frame_count = 0
-        initial_mesh_frame_size=mesh_frame_size
-        mesh_size_helper=0
-        while total_size >= frame_size:                
-            slice_frame = int.from_bytes(to_binary[frame_size:mesh_frame_size], byteorder='little', signed=True)
-            frame = to_binary[frame_size:mesh_frame_size+slice_frame]
+#     if  valid_frame == [3,20,1,0]: #check if header is correct      
+#         frame_size=0
+#         frame_count = 0
+#         initial_mesh_frame_size=mesh_frame_size
+#         mesh_size_helper=0
+#         while total_size >= frame_size:                
+#             slice_frame = int.from_bytes(to_binary[frame_size:mesh_frame_size], byteorder='little', signed=True)
             
+#             frame = to_binary[frame_size:mesh_frame_size+slice_frame]
+            
+#             '''convert binary to base64 encoded string'''
+#             frame_base64 = base64.b64encode(frame)
+#             frame_base64 = frame_base64.decode('utf-8')            
+#             frame_size=frame_size+mesh_frame_size    
+#             mesh_frame_size=mesh_frame_size+8
+#             frame_count += 1
+            
+#             context =  {
+#                     "command": "new_frame", 
+#                     "sender": "js script", 
+#                     "frame": frame_base64,
+#                     "frameId": frame_count, 
+#                     "keyFrameID": frame_count, 
+#                 }
+
+#             meta_data = {
+#                 "timestamp":timestamp,
+#                 "num_meshes":num_meshes,
+#                 "frame":frame_base64,
+#                 "mesh_frame_size":mesh_frame_size
+#                 }           
+
+#             time.sleep(0.5)
+#             send_message(context)
+#             print(
+#                 f'''
+#                 \nbatch_no: {batch_no}
+#                 \nmesh_frame_size: {mesh_frame_size}
+#                 \ntotal_size: {total_size}
+#                 \nframe_count: {frame_count}
+#                 \nframe_size: {frame_size}
+#                 \n\n''')
+
+#         '''Start recursion to next batch'''
+#         batch_no += 1
+#         decoder(fetch_batch('hiroki1', batch_no), batch_no)
+
+#     else:
+#         '''Start recursion to next batch'''
+#         batch_no += 1
+#         decoder(fetch_batch('hiroki1', batch_no), batch_no)
+
+
+def decoder(archive_id, batch_no):
+    print('===started====')
+    to_binary=fetch_batch(archive_id, batch_no)
+    total_size = len(to_binary) # --buffer size
+    '''Header information'''
+    current_pos=0
+    frame_count = 0
+    pos_update=0
+    
+
+    while total_size != current_pos:
+        # print(total_size,current_pos)
+        size = int.from_bytes(to_binary[current_pos:current_pos+1], byteorder='big' , signed=True)
+        size2 = int.from_bytes(to_binary[current_pos+1:current_pos+2], byteorder='big' , signed=True)
+        byte3 = int.from_bytes(to_binary[current_pos+2:current_pos+3], byteorder='big' , signed=True)
+        byte4 = int.from_bytes(to_binary[current_pos+3:current_pos+4], byteorder='big' , signed=True)
+        valid_frame=[size,size2, byte3, byte4]
+        mesh_frame_size= int.from_bytes(to_binary[current_pos+4:current_pos+8], byteorder='little' , signed=True)
+        if  valid_frame == [3,20,1,0]: #check if header is correct
+            timestamp = int.from_bytes(to_binary[current_pos+8:current_pos+12], byteorder='little' , signed=True)
+            num_meshes = int.from_bytes(to_binary[current_pos+12:current_pos+16], byteorder='little', signed=True)
+            
+            frame = to_binary[current_pos:current_pos+mesh_frame_size]
             '''convert binary to base64 encoded string'''
             frame_base64 = base64.b64encode(frame)
-            frame_base64 = frame_base64.decode('utf-8')            
-            frame_size=mesh_frame_size+4        
-            mesh_frame_size=mesh_frame_size+8
+            frame_base64 = frame_base64.decode('utf-8')
             frame_count += 1
-            
             context =  {
-                    "command": "new_frame", 
-                    "sender": "js script", 
+                    "command": "new_frame",
+                    "sender": "Archive streamer",
                     "frame": frame_base64,
-                    "frameId": frame_count, 
-                    "keyFrameID": frame_count, 
+                    "frameID": frame_count,
+                    "key_frame_id":0,
                 }
-
-            meta_data = {
-                "timestamp":timestamp,
-                "num_meshes":num_meshes,
-                "frame":frame_base64,
-                "mesh_frame_size":mesh_frame_size
-                }           
-
-            time.sleep(0.5)
+            
+            time.sleep(0.3)
             send_message(context)
             print(
                 f'''
                 \nbatch_no: {batch_no}
                 \nmesh_frame_size: {mesh_frame_size}
-                \ntotal_size: {total_size}
+                \ntotal_size: {current_pos}/{total_size}
                 \nframe_count: {frame_count}
-                \nframe_size: {frame_size}
                 \n\n''')
+        
+        '''if frame is invalid then skip to next frame'''
+        # decoder(fetch_batch(to_binary, batch_no+1), batch_no+1)
+        current_pos=current_pos+mesh_frame_size
 
-        '''Start recursion to next batch'''
-        batch_no += 1
-        decoder(fetch_batch('hiroki1', batch_no), batch_no)
 
-    else:
-        '''Start recursion to next batch'''
-        batch_no += 1
-        decoder(fetch_batch('hiroki1', batch_no), batch_no)
+    '''Start recursion to next batch'''
+    batch_no += 1
+    # print("===DONE=== ", batch_no)
+    decoder(archive_id, batch_no)

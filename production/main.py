@@ -1,5 +1,5 @@
-from decoder import decoder, fetch_batch
+from decoder import decoder
 
 if __name__ == '__main__':
     '''Start decoding'''
-    decoder(fetch_batch('hiroki1',1),1)
+    decoder('hiroki1',1)
